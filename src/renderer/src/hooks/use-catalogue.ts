@@ -13,7 +13,11 @@ const SUPPORTED_STEAM_METADATA_LANGUAGES = new Set([
   "fr",
 ]);
 
-async function getLocalizedSteamMetadata<T>(endpoint: string, locale: string) {
+async function getLocalizedSteamMetadata<T>(
+  endpoint: string,
+  locale: string,
+  isValid: (data: unknown) => data is T
+) {
   const language = locale.split("-")[0] || "en";
   const requestLanguage = SUPPORTED_STEAM_METADATA_LANGUAGES.has(language)
     ? language
@@ -21,20 +25,37 @@ async function getLocalizedSteamMetadata<T>(endpoint: string, locale: string) {
   const languages = requestLanguage === "en" ? ["en"] : ["en", requestLanguage];
   const entries = await Promise.all(
     languages.map(async (currentLanguage) => {
-      const data = await window.electron.hydraApi.get<T>(endpoint, {
-        params: { language: currentLanguage },
-        needsAuth: false,
-      });
+      const data = await window.electron.hydraApi
+        .get<T>(endpoint, {
+          params: { language: currentLanguage },
+          needsAuth: false,
+        })
+        .catch(() => null);
 
-      return [currentLanguage, data] as const;
+      // A backend that doesn't implement this route (e.g. a self-hosted
+      // instance) resolves with its error body instead of throwing, so drop
+      // anything that isn't the shape the catalogue expects.
+      return [currentLanguage, isValid(data) ? data : null] as const;
     })
   );
-  const metadata = Object.fromEntries(entries) as Record<string, T>;
+  const metadata = Object.fromEntries(
+    entries.filter(([, data]) => data !== null)
+  ) as Record<string, T>;
 
-  metadata[language] ??= metadata[requestLanguage];
+  if (metadata[requestLanguage])
+    metadata[language] ??= metadata[requestLanguage];
 
   return metadata;
 }
+
+const isStringArray = (data: unknown): data is string[] =>
+  Array.isArray(data) && data.every((entry) => typeof entry === "string");
+
+const isTagRecord = (data: unknown): data is Record<string, number> =>
+  typeof data === "object" &&
+  data !== null &&
+  !Array.isArray(data) &&
+  Object.values(data).every((value) => typeof value === "number");
 
 export function useCatalogue() {
   const dispatch = useAppDispatch();
@@ -48,11 +69,13 @@ export function useCatalogue() {
     const [tags, genres] = await Promise.all([
       getLocalizedSteamMetadata<Record<string, number>>(
         "/catalogue/steam/tags",
-        i18n.language
+        i18n.language,
+        isTagRecord
       ),
       getLocalizedSteamMetadata<string[]>(
         "/catalogue/steam/genres",
-        i18n.language
+        i18n.language,
+        isStringArray
       ),
     ]);
 
@@ -63,13 +86,15 @@ export function useCatalogue() {
   const getSteamPublishers = useCallback(() => {
     window.electron.hydraApi
       .get<string[]>("/catalogue/steam/publishers", { needsAuth: false })
-      .then(setSteamPublishers);
+      .then((data) => setSteamPublishers(isStringArray(data) ? data : []))
+      .catch(() => setSteamPublishers([]));
   }, []);
 
   const getSteamDevelopers = useCallback(() => {
     window.electron.hydraApi
       .get<string[]>("/catalogue/steam/developers", { needsAuth: false })
-      .then(setSteamDevelopers);
+      .then((data) => setSteamDevelopers(isStringArray(data) ? data : []))
+      .catch(() => setSteamDevelopers([]));
   }, []);
 
   const getDownloadSources = useCallback(() => {

@@ -258,7 +258,8 @@ export default function Catalogue() {
   const language = i18n.language.split("-")[0];
 
   const steamGenresMapping = useMemo<Record<string, string>>(() => {
-    if (!steamGenres[language]) return {};
+    if (!Array.isArray(steamGenres[language])) return {};
+    if (!Array.isArray(steamGenres["en"])) return {};
 
     return steamGenres[language].reduce((prev, genre, index) => {
       prev[genre] = steamGenres["en"][index];

@@ -126,13 +126,13 @@ export function GameItemClassics({ game }: GameItemClassicsProps) {
 
   const genres = useMemo(() => {
     return game.genres?.map((genre) => {
-      const index = steamGenres["en"]?.findIndex(
-        (steamGenre) => steamGenre === genre
-      );
+      const index = Array.isArray(steamGenres["en"])
+        ? steamGenres["en"].findIndex((steamGenre) => steamGenre === genre)
+        : undefined;
 
       if (
         index !== undefined &&
-        steamGenres[language] &&
+        Array.isArray(steamGenres[language]) &&
         steamGenres[language][index]
       ) {
         return steamGenres[language][index];
