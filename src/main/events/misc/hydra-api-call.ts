@@ -11,7 +11,7 @@ import axios from "axios";
 import type { HowLongToBeatCategory } from "@types";
 
 interface HydraApiCallPayload {
-  method: "get" | "post" | "put" | "patch" | "delete";
+  method: "get" | "post" | "postResponse" | "put" | "patch" | "delete";
   url: string;
   data?: unknown;
   params?: unknown;
@@ -19,6 +19,7 @@ interface HydraApiCallPayload {
     needsAuth?: boolean;
     needsSubscription?: boolean;
     ifModifiedSince?: Date;
+    acceptedStatuses?: number[];
   };
 }
 
@@ -155,6 +156,14 @@ const hydraApiCall = async (
   payload: HydraApiCallPayload
 ) => {
   const { method, url, data, params, options } = payload;
+  const hydraApiOptions = {
+    ...options,
+    validateStatus: options?.acceptedStatuses
+      ? (status: number) =>
+          status !== 401 &&
+          (options.acceptedStatuses?.includes(status) ?? false)
+      : undefined,
+  };
 
   const getErrorMessage = (error: unknown): string | null => {
     if (typeof error === "object" && error !== null) {
@@ -206,7 +215,7 @@ const hydraApiCall = async (
         const limit = parseInt((params as any)?.limit ?? "5");
         request = steamSearchSuggestions(q, limit);
       } else {
-        request = HydraApi.get(url, params, options);
+        request = HydraApi.get(url, params, hydraApiOptions);
       }
     } else if (isReviewsUrl && HydraApi.useSelfHostedReviews) {
       switch (method) {
@@ -223,24 +232,27 @@ const hydraApiCall = async (
           request = HydraApi.gameDataDelete(url);
           break;
         default:
-          request = HydraApi.get(url, params, options);
+          request = HydraApi.get(url, params, hydraApiOptions);
       }
     } else {
       switch (method) {
         case "get":
-          request = HydraApi.get(url, params, options);
+          request = HydraApi.get(url, params, hydraApiOptions);
           break;
         case "post":
-          request = HydraApi.post(url, data, options);
+          request = HydraApi.post(url, data, hydraApiOptions);
+          break;
+        case "postResponse":
+          request = HydraApi.postResponse(url, data, hydraApiOptions);
           break;
         case "put":
-          request = HydraApi.put(url, data, options);
+          request = HydraApi.put(url, data, hydraApiOptions);
           break;
         case "patch":
-          request = HydraApi.patch(url, data, options);
+          request = HydraApi.patch(url, data, hydraApiOptions);
           break;
         case "delete":
-          request = HydraApi.delete(url, options);
+          request = HydraApi.delete(url, hydraApiOptions);
           break;
         default:
           throw new Error(`Unsupported HTTP method: ${method}`);

@@ -70,6 +70,7 @@ export interface Game {
   isPinned?: boolean;
   achievementCount?: number;
   unlockedAchievementCount?: number;
+  reportedUnlockedAchievementCount?: number;
   pinnedDate?: Date | null;
   automaticCloudSync?: boolean;
   hasManuallyUpdatedPlaytime?: boolean;
@@ -83,6 +84,8 @@ export interface Game {
   dontAskDiscSelection?: boolean;
   romSizeBytes?: number | null;
   launchViaSteam?: boolean | null;
+  /** Fork: per-game override of the account-wide cloud saves version. */
+  cloudSavesVersion?: "v1" | "v2" | null;
 }
 
 export interface Download {
@@ -162,6 +165,7 @@ export interface UserPreferences {
   runAtStartup?: boolean;
   startMinimized?: boolean;
   launchToLibraryPage?: boolean;
+  bigPictureLaunchToLibraryPage?: boolean;
   launchInBigPicture?: boolean;
   disableNsfwAlert?: boolean;
   enableAutoInstall?: boolean;
@@ -180,6 +184,8 @@ export interface UserPreferences {
   extractFilesByDefault?: boolean;
   deleteArchiveFilesAfterExtractionByDefault?: boolean;
   enableSteamAchievements?: boolean;
+  enableAchievementSouvenirs?: boolean;
+  achievementScreenshotsPath?: string;
   autoplayGameTrailers?: boolean;
   hideToTrayOnGameStart?: boolean;
   enableNewDownloadOptionsBadges?: boolean;
@@ -215,6 +221,10 @@ export interface UserPreferences {
   cloudSavesVersion?: "v1" | "v2";
   steamGridDbApiKey?: string | null;
   steamGridDbMode?: "hydra" | "custom";
+  hideLibraryGameBadges?: boolean;
+  hideLibraryClassicsBadges?: boolean;
+  hideLibraryAchievementProgress?: boolean;
+  autoplayAnimatedArtwork?: boolean;
 }
 
 export interface NetworkInterface {

@@ -92,6 +92,8 @@ const DESCRIPTION_DISALLOWED_SELECTORS = [
   "link",
   "meta",
 ].join(", ");
+const DESCRIPTION_PARAGRAPH_BREAK = /(?:\r?\n){2,}/;
+const DESCRIPTION_LINE_BREAK = /\r?\n/;
 const DESCRIPTION_SCROLL_STEP = 180;
 const DESCRIPTION_SCROLL_EDGE_TOLERANCE = 4;
 const DESCRIPTION_FOCUS_ENTRY_MARGIN = 32;
@@ -223,6 +225,56 @@ function normalizeDescriptionMediaElement(
   mediaElement.style.boxSizing = "border-box";
 }
 
+function appendDescriptionParagraph(
+  document: Document,
+  fragment: DocumentFragment,
+  block: string
+) {
+  const lines = block
+    .split(DESCRIPTION_LINE_BREAK)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+
+  if (lines.length === 0) {
+    return;
+  }
+
+  const paragraph = document.createElement("p");
+
+  lines.forEach((line, index) => {
+    if (index > 0) {
+      paragraph.appendChild(document.createElement("br"));
+    }
+
+    paragraph.appendChild(document.createTextNode(line));
+  });
+
+  fragment.appendChild(paragraph);
+}
+
+function wrapLooseDescriptionText(document: Document) {
+  const looseTextNodes = Array.from(document.body.childNodes).filter(
+    (node) =>
+      node.nodeType === Node.TEXT_NODE && Boolean(node.textContent?.trim())
+  );
+
+  for (const textNode of looseTextNodes) {
+    const fragment = document.createDocumentFragment();
+
+    for (const block of (textNode.textContent ?? "").split(
+      DESCRIPTION_PARAGRAPH_BREAK
+    )) {
+      appendDescriptionParagraph(document, fragment, block);
+    }
+
+    if (fragment.childNodes.length === 0) {
+      continue;
+    }
+
+    textNode.replaceWith(fragment);
+  }
+}
+
 function preprocessSteamDescriptionDocument(html: string) {
   if (!html) {
     return null;
@@ -262,6 +314,8 @@ function preprocessSteamDescriptionDocument(html: string) {
     video.setAttribute("playsinline", "");
     normalizeDescriptionMediaElement(video);
   });
+
+  wrapLooseDescriptionText(document);
 
   return document;
 }
@@ -491,6 +545,7 @@ export default function Game() {
     (shopDetails?.movies?.length ?? 0) > 0 ||
     (shopDetails?.screenshots?.length ?? 0) > 0;
   const isLaunchboxGame = shop === "launchbox";
+  const isCustomGame = shop === "custom";
   const developer = shopDetails?.developers?.[0] ?? "";
   const publisher = shopDetails?.publishers?.[0] ?? "";
   const releaseDate = shopDetails?.release_date?.date ?? "";
@@ -1319,70 +1374,76 @@ export default function Game() {
                 </VerticalFocusGroup>
               )}
 
-              <Divider />
+              {!isCustomGame && (
+                <>
+                  <Divider />
 
-              <GameReviews
-                shop={shop!}
-                objectId={objectId!}
-                topNavigationTarget={commentsTopNavigationTarget}
-                onHasNavigableActionsChange={setHasNavigableComments}
-              />
+                  <GameReviews
+                    shop={shop!}
+                    objectId={objectId!}
+                    topNavigationTarget={commentsTopNavigationTarget}
+                    onHasNavigableActionsChange={setHasNavigableComments}
+                  />
+                </>
+              )}
             </div>
 
             <VerticalFocusGroup regionId={GAME_SIDEBAR_REGION_ID} asChild>
               <div className="game-page__sidebar">
-                <FocusItem
-                  id={GAME_SIDEBAR_STATS_ID}
-                  navigationOrder={0}
-                  navigationOverrides={sidebarStatsNavigationOverrides}
-                  asChild
-                >
-                  <section
-                    className="game-page__sidebar-section game-page__stats"
-                    aria-label="Game stats"
+                {!isCustomGame && (
+                  <FocusItem
+                    id={GAME_SIDEBAR_STATS_ID}
+                    navigationOrder={0}
+                    navigationOverrides={sidebarStatsNavigationOverrides}
+                    asChild
                   >
-                    <div className="game-page__stats-title">
-                      <Typography>Game Stats</Typography>
-                    </div>
+                    <section
+                      className="game-page__sidebar-section game-page__stats"
+                      aria-label="Game stats"
+                    >
+                      <div className="game-page__stats-title">
+                        <Typography>Game Stats</Typography>
+                      </div>
 
-                    <div className="game-page__stats-row">
-                      <Typography className="game-page__stats-label">
-                        Rating
-                      </Typography>
-                      <div className="game-page__stats-rating-value">
-                        <StarIcon
-                          size={16}
-                          weight="fill"
-                          aria-hidden="true"
-                          className="game-page__stats-rating-icon"
-                        />
+                      <div className="game-page__stats-row">
+                        <Typography className="game-page__stats-label">
+                          Rating
+                        </Typography>
+                        <div className="game-page__stats-rating-value">
+                          <StarIcon
+                            size={16}
+                            weight="fill"
+                            aria-hidden="true"
+                            className="game-page__stats-rating-icon"
+                          />
+                          <Typography className="game-page__stats-value">
+                            {formatNumber(stats?.averageScore ?? 0)}
+                          </Typography>
+                        </div>
+                      </div>
+
+                      <div className="game-page__stats-row">
+                        <Typography className="game-page__stats-label">
+                          Downloads
+                        </Typography>
                         <Typography className="game-page__stats-value">
-                          {formatNumber(stats?.averageScore ?? 0)}
+                          {formatNumber(stats?.downloadCount ?? 0)}
                         </Typography>
                       </div>
-                    </div>
 
-                    <div className="game-page__stats-row">
-                      <Typography className="game-page__stats-label">
-                        Downloads
-                      </Typography>
-                      <Typography className="game-page__stats-value">
-                        {formatNumber(stats?.downloadCount ?? 0)}
-                      </Typography>
-                    </div>
+                      <div className="game-page__stats-row">
+                        <Typography className="game-page__stats-label">
+                          Playing now
+                        </Typography>
+                        <Typography className="game-page__stats-value">
+                          {formatNumber(stats?.playerCount ?? 0)}
+                        </Typography>
+                      </div>
+                    </section>
+                  </FocusItem>
+                )}
 
-                    <div className="game-page__stats-row">
-                      <Typography className="game-page__stats-label">
-                        Playing now
-                      </Typography>
-                      <Typography className="game-page__stats-value">
-                        {formatNumber(stats?.playerCount ?? 0)}
-                      </Typography>
-                    </div>
-                  </section>
-                </FocusItem>
-
-                {!isLaunchboxGame && (howLongToBeat?.length ?? 0) > 0 && (
+                {(howLongToBeat?.length ?? 0) > 0 && (
                   <HowLongToBeatBox
                     howLongToBeat={howLongToBeat ?? []}
                     focusId={GAME_SIDEBAR_HLTB_ID}
@@ -1412,7 +1473,7 @@ export default function Game() {
                   focusNavigationOverrides={sidebarCarouselNavigationOverrides}
                 />
 
-                {!isLaunchboxGame && (game?.achievementCount ?? 0) > 0 && (
+                {achievements.length > 0 && (
                   <AchievementsBox
                     achievements={achievements ?? []}
                     focusId={GAME_SIDEBAR_ACHIEVEMENTS_ID}
@@ -1509,7 +1570,7 @@ export default function Game() {
                   </section>
                 </FocusItem>
 
-                {!isLaunchboxGame ? ( // NOSONAR
+                {!isLaunchboxGame && !isCustomGame ? ( // NOSONAR
                   <RequirementsToPlay
                     shopDetails={shopDetails}
                     focusId={GAME_SIDEBAR_REQUIREMENTS_ID}

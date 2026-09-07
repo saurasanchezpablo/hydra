@@ -1,4 +1,10 @@
-import { CloudSync, HydraApi, logger, WindowManager, Wine } from "@main/services";
+import {
+  CloudSync,
+  HydraApi,
+  logger,
+  WindowManager,
+  Wine,
+} from "@main/services";
 import fs from "node:fs";
 import * as tar from "tar";
 import { registerEvent } from "../register-event";

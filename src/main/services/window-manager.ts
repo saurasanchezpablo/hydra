@@ -483,9 +483,11 @@ export class WindowManager {
       this.bigPicture.webContents.openDevTools();
     }
 
-    const bigPictureInitialHash = userPreferences?.launchToLibraryPage
-      ? "big-picture/library"
-      : "big-picture";
+    const bigPictureInitialHash =
+      (userPreferences?.bigPictureLaunchToLibraryPage ??
+      userPreferences?.launchToLibraryPage)
+        ? "big-picture/library"
+        : "big-picture";
 
     this.loadWindowURL(this.bigPicture, bigPictureInitialHash);
 
@@ -1385,7 +1387,9 @@ export class WindowManager {
                 .then((m) => m.selfHostedSignIn(null, token))
                 .catch(() => {});
               res.writeHead(200, { "Content-Type": "text/html" });
-              res.end("<html><body style='background:#111;color:#ddd;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0'><h1>Signed in!</h1></body></html>");
+              res.end(
+                "<html><body style='background:#111;color:#ddd;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0'><h1>Signed in!</h1></body></html>"
+              );
               server.close();
             } else {
               res.writeHead(404);

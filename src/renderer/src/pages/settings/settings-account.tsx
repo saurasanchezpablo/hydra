@@ -19,9 +19,12 @@ import { settingsContext } from "@renderer/context";
 import { AuthPage } from "@shared";
 import { useAppSelector } from "@renderer/hooks";
 import "./settings-account.scss";
+import type { ProfileVisibility } from "@types";
 
 interface FormValues {
-  profileVisibility: "PUBLIC" | "FRIENDS" | "PRIVATE";
+  profileVisibility: ProfileVisibility;
+  allowCloudGifts: boolean;
+  souvenirsVisibility: ProfileVisibility;
 }
 
 export function SettingsAccount() {
@@ -41,7 +44,12 @@ export function SettingsAccount() {
     formState: { isSubmitting },
     setValue,
     handleSubmit,
-  } = useForm<FormValues>();
+  } = useForm<FormValues>({
+    defaultValues: {
+      profileVisibility: "PUBLIC",
+      souvenirsVisibility: "PRIVATE",
+    },
+  });
 
   const {
     userDetails,
@@ -61,6 +69,10 @@ export function SettingsAccount() {
   useEffect(() => {
     if (userDetails?.profileVisibility) {
       setValue("profileVisibility", userDetails.profileVisibility);
+      setValue("allowCloudGifts", userDetails.allowCloudGifts);
+    }
+    if (userDetails?.souvenirsVisibility) {
+      setValue("souvenirsVisibility", userDetails.souvenirsVisibility);
     }
   }, [userDetails, setValue]);
 
@@ -189,6 +201,37 @@ export function SettingsAccount() {
         }}
       />
 
+      <Controller
+        control={control}
+        name="souvenirsVisibility"
+        render={({ field }) => {
+          const handleChange = (
+            event: React.ChangeEvent<HTMLSelectElement>
+          ) => {
+            field.onChange(event);
+            handleSubmit(onSubmit)();
+          };
+
+          return (
+            <section className="settings-account__section">
+              <SelectField
+                label={t("souvenirs_visibility")}
+                value={field.value}
+                onChange={handleChange}
+                options={visibilityOptions.map((visibility) => ({
+                  key: visibility.value,
+                  value: visibility.value,
+                  label: visibility.label,
+                }))}
+                disabled={isSubmitting}
+              />
+
+              <small>{t("souvenirs_visibility_description")}</small>
+            </section>
+          );
+        }}
+      />
+
       <section className="settings-account__section">
         <h4>{t("current_username")}</h4>
         <p>{userDetails?.username}</p>
@@ -242,6 +285,26 @@ export function SettingsAccount() {
           {getHydraCloudSectionContent().callToAction}
         </Button>
       </section>
+
+      <Controller
+        control={control}
+        name="allowCloudGifts"
+        render={({ field }) => (
+          <section className="settings-account__section">
+            <h3>{t("cloud_gifts")}</h3>
+            <CheckboxField
+              checked={field.value ?? true}
+              disabled={isSubmitting}
+              label={t("allow_cloud_gifts")}
+              onChange={(event) => {
+                field.onChange(event.target.checked);
+                void handleSubmit(onSubmit)();
+              }}
+            />
+            <small>{t("allow_cloud_gifts_description")}</small>
+          </section>
+        )}
+      />
 
       <section className="settings-account__section">
         <h3>Session</h3>

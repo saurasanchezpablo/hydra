@@ -2,10 +2,21 @@ import type { UserAchievement } from "@types";
 import { registerEvent } from "../register-event";
 import { gameAchievementsSublevel } from "@main/level";
 import { WindowManager } from "@main/services";
+import {
+  cancelPendingSouvenirsForShop,
+  deleteLocalSouvenirAssetsForShop,
+} from "@main/services/achievements/grouped-souvenir-worker";
 
 const LAUNCHBOX_KEY_PREFIX = "launchbox:";
 
-const resetRetroAchievementsAchievements = async () => {
+const resetRetroAchievementsAchievements = async (
+  _event: Electron.IpcMainInvokeEvent,
+  pendingSouvenirsOnly = false
+) => {
+  await cancelPendingSouvenirsForShop("launchbox");
+  if (pendingSouvenirsOnly) return;
+  await deleteLocalSouvenirAssetsForShop("launchbox");
+
   const entries = await gameAchievementsSublevel.iterator().all();
 
   for (const [key, gameAchievement] of entries) {

@@ -2,7 +2,10 @@ import { shell } from "electron";
 import { logger } from "@main/services/logger";
 import { registerEvent } from "../register-event";
 
-const openExternal = async (_event: Electron.IpcMainInvokeEvent, src: string) => {
+const openExternal = async (
+  _event: Electron.IpcMainInvokeEvent,
+  src: string
+) => {
   try {
     return await shell.openExternal(src);
   } catch (error) {
