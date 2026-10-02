@@ -49,12 +49,16 @@ export interface Game {
   customOriginalHeroPath?: string | null;
   customOriginalCoverPath?: string | null;
   playTimeInMilliseconds: number;
+  steamPlayTimeInMilliseconds?: number;
+  hasActiveSteamImport?: boolean;
+  enableHydraPlaytimeTracking?: boolean;
   unsyncedDeltaPlayTimeInMilliseconds?: number;
   lastTimePlayed: Date | null;
   addedToLibraryAt?: Date | null;
   objectId: string;
   shop: GameShop;
   remoteId: string | null;
+  source?: "hydra" | "steam";
   collectionIds?: string[];
   isDeleted: boolean;
   winePrefixPath?: string | null;
@@ -67,6 +71,8 @@ export interface Game {
   autoRunMangohud?: boolean | null;
   autoRunGamemode?: boolean | null;
   favorite?: boolean;
+  isHiddenFromOthers?: boolean;
+  isConcealed?: boolean;
   isPinned?: boolean;
   achievementCount?: number;
   unlockedAchievementCount?: number;
@@ -222,9 +228,12 @@ export interface UserPreferences {
   steamGridDbApiKey?: string | null;
   steamGridDbMode?: "hydra" | "custom";
   hideLibraryGameBadges?: boolean;
+  hideLibraryReadySizeBadges?: boolean;
   hideLibraryClassicsBadges?: boolean;
+  hideSteamLibraryBadges?: boolean;
   hideLibraryAchievementProgress?: boolean;
   autoplayAnimatedArtwork?: boolean;
+  persistFiltersAndSorting?: boolean;
 }
 
 export interface NetworkInterface {

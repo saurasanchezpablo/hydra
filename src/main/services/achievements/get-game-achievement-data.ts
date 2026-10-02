@@ -2,7 +2,8 @@ import { HydraApi } from "../hydra-api";
 import type { GameShop, SteamAchievement } from "@types";
 import { UserNotLoggedInError } from "@shared";
 import { logger } from "../logger";
-import { db, gameAchievementsSublevel, levelKeys } from "@main/level";
+import { db, levelKeys } from "@main/level";
+import { AchievementMemoryStore } from "./achievement-memory-store";
 
 export const getGameAchievementData = async (
   objectId: string,
@@ -13,9 +14,7 @@ export const getGameAchievementData = async (
     return [];
   }
 
-  const gameKey = levelKeys.game(shop, objectId);
-
-  const cachedAchievements = await gameAchievementsSublevel.get(gameKey);
+  const cachedAchievements = AchievementMemoryStore.get(shop, objectId);
 
   const language = await db
     .get<string, string>(levelKeys.language, {
@@ -48,10 +47,14 @@ export const getGameAchievementData = async (
         return cachedAchievements?.achievements ?? [];
       }
 
-      await gameAchievementsSublevel.put(gameKey, {
+      const achievements =
+        response.data.length > 0
+          ? response.data
+          : (cachedAchievements?.achievements ?? []);
+
+      AchievementMemoryStore.set(shop, objectId, {
         unlockedAchievements: cachedAchievements?.unlockedAchievements ?? [],
-        achievements: response.data,
-        updatedAt: Date.now(),
+        achievements,
         language,
         catalogueValidator:
           typeof response.headers.etag === "string"
@@ -59,7 +62,7 @@ export const getGameAchievementData = async (
             : undefined,
       });
 
-      return response.data;
+      return achievements;
     })
     .catch((err) => {
       if (err instanceof UserNotLoggedInError) {

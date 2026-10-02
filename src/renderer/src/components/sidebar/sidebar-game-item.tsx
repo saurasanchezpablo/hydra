@@ -5,10 +5,16 @@ import cn from "classnames";
 import { useLocation } from "react-router-dom";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ConfirmationModal, GameContextMenu, useGameActions } from "..";
+import {
+  ConfirmationModal,
+  GameContextMenu,
+  SteamLibraryBadge,
+  useGameActions,
+} from "..";
 import { HeartFillIcon, PinIcon } from "@primer/octicons-react";
 import { useAppSelector, useToast } from "@renderer/hooks";
 import { useCollectionContextMenu } from "@renderer/context";
+import { shouldShowSteamLibraryBadge } from "@renderer/helpers";
 
 interface SidebarGameItemProps {
   game: LibraryGame;
@@ -91,14 +97,25 @@ export function SidebarGameItem({
                 void handlePlayGame();
               } else {
                 showWarningToast(
-                  t("game_has_no_executable", { ns: "translation" })
+                  game.shop === "launchbox"
+                    ? t("game_has_no_disc_hint", {
+                        ns: "sidebar",
+                        options: t("options"),
+                        settings: t("settings", { ns: "sidebar" }),
+                        emulation: t("emulation", { ns: "settings" }),
+                      })
+                    : t("game_has_no_executable_hint", {
+                        ns: "sidebar",
+                        options: t("options"),
+                        locations: t("settings_category_locations"),
+                      })
                 );
               }
             }
           }}
           onContextMenu={handleContextMenu}
         >
-          <div className="sidebar__game-icon-wrapper">
+          <span className="sidebar__game-icon-container">
             {sidebarIcon ? (
               <img
                 className="sidebar__game-icon"
@@ -109,14 +126,16 @@ export function SidebarGameItem({
             ) : (
               getFallbackIcon()
             )}
-
-            {isSteamSynced && (
-              <SteamLogo className="sidebar__game-source-badge sidebar__game-source-badge--steam" />
-            )}
+            {shouldShowSteamLibraryBadge(
+              game,
+              userPreferences?.hideSteamLibraryBadges
+            ) && <SteamLibraryBadge variant="sidebar" />}
+            {/* Fork: mark Hydra-sourced (non-Steam) games, which upstream's
+                Steam-only badge does not cover. */}
             {isPirated && !isSteamSynced && (
               <HydraIcon className="sidebar__game-source-badge sidebar__game-source-badge--hydra" />
             )}
-          </div>
+          </span>
 
           <span className="sidebar__menu-item-button-label">
             {getGameTitle(game)}

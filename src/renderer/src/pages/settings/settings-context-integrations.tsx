@@ -4,6 +4,7 @@ import { SettingsSelfHosted } from "./settings-self-hosted";
 import { SettingsSteamGridDb } from "./settings-steamgriddb";
 import { SettingsRetroAchievements } from "./settings-retroachievements";
 import { SettingsCloudSaves } from "./settings-cloud-saves";
+import { SettingsSteam } from "./settings-steam";
 
 export function SettingsContextIntegrations() {
   const { t } = useTranslation("settings");
@@ -11,6 +12,7 @@ export function SettingsContextIntegrations() {
   return (
     <div className="settings-context-panel">
       <div className="settings-context-panel__group">
+        <SettingsSteam />
         <SettingsRetroAchievements />
       </div>
 

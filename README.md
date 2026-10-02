@@ -5,7 +5,7 @@
   <h1 align="center">Hydra Launcher</h1>
 
   <p align="center">
-    <strong>Hydra Launcher is an open-source gaming platform created to be the single tool that you need in order to manage your gaming library. Hydra is written in Node.js (Electron, React, Typescript), Python, and Rust.</strong>
+    <strong>Hydra Launcher is an open-source gaming platform created to be the single tool that you need in order to manage your gaming library. Hydra is written in Node.js (Electron, React, Typescript) and Rust, with libtorrent providing the torrent engine.</strong>
   </p>
 
 [![build](https://img.shields.io/github/actions/workflow/status/hydralauncher/hydra/build.yml)](https://github.com/hydralauncher/hydra/actions)
@@ -46,9 +46,15 @@ This is a fork of [hydralauncher/hydra](https://github.com/hydralauncher/hydra) 
 
 ## Dependencies
 
+- Node.js + Yarn
+- Rust toolchain (for `hydra-native`)
+- Git and a C++ toolchain (Visual Studio C++ Build Tools on Windows, GCC/Clang on Linux, Xcode command-line tools on macOS). The native build obtains CMake and CTest automatically through vcpkg.
+
+The native build includes a Rust wrapper around pinned libtorrent. Development and packaged torrenting no longer require Python.
+
 ```bash
-npm install
-npm run build:linux   # or build:win / build:mac
+yarn install
+yarn build:linux   # or build:win / build:mac
 ```
 
 ## Contributors

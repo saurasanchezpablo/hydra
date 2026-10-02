@@ -44,6 +44,7 @@ import GameLauncher from "./pages/game-launcher/game-launcher";
 import FriendsWindow from "./pages/friends-window/friends-window";
 import AuthWindow from "./pages/auth-window/auth-window";
 import SelfHostedAuth from "./pages/self-hosted-auth/self-hosted-auth";
+import RetroAchievementsConnectionWindow from "./pages/retroachievements-connection-window/retroachievements-connection-window";
 import BigPictureApp from "../../big-picture/src/app";
 import BigPictureCatalogue from "../../big-picture/src/pages/catalogue/catalogue";
 import BigPictureComponentLab from "../../big-picture/src/pages/component-lab/component-lab";
@@ -158,6 +159,10 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
                 <Route path="/friends-window" element={<FriendsWindow />} />
                 <Route path="/auth-window" element={<AuthWindow />} />
                 <Route path="/self-hosted-auth" element={<SelfHostedAuth />} />
+                <Route
+                  path="/retroachievements-connection"
+                  element={<RetroAchievementsConnectionWindow />}
+                />
 
                 <Route path="/big-picture" element={<BigPictureApp />}>
                   <Route index element={<BigPictureHome />} />

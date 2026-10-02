@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   BIG_PICTURE_APP_LAYER_ID,
@@ -13,10 +14,9 @@ import {
   Sidebar,
 } from "./layout";
 import { IS_DESKTOP } from "./constants";
-import { useNavigation, useUserPreferences } from "./hooks";
+import { useBigPictureToast, useNavigation, useUserPreferences } from "./hooks";
 import { ConfirmationModal } from "./components/modals";
 import { ForkUpdateModal } from "./components/fork-update-modal";
-import { useTranslation } from "react-i18next";
 import { getGameExecutableFilters } from "@shared";
 import {
   HorizontalFocusGroup,
@@ -45,12 +45,13 @@ import "./styles/globals.scss";
 export default function App() {
   ensureBigPictureI18nResources();
 
+  const { t } = useTranslation();
   const { pathname } = useLocation();
   const navigate = useNavigate();
+  const { showErrorToast } = useBigPictureToast();
   const { nodes, regions, setFocusRegion } = useNavigation();
   const userPreferences = useUserPreferences();
   const inputMode = useInputModeStore((state) => state.mode);
-  const { t } = useTranslation("downloads");
   const [pendingRouteFocusPathname, setPendingRouteFocusPathname] = useState<
     string | null
   >(pathname);
@@ -113,6 +114,61 @@ export default function App() {
   }, [navigate]);
 
   useEffect(() => {
+    if (!IS_DESKTOP) return;
+
+    const unsubscribeExtractionFailed =
+      globalThis.window.electron.onExtractionFailed(
+        (_shop, _objectId, failure) => {
+          if (failure?.reason === "unsupported-format") {
+            showErrorToast(
+              t("extraction_unsupported_format_title", { ns: "downloads" }),
+              {
+                message: t("extraction_unsupported_format_description", {
+                  ns: "downloads",
+                  format: failure.format,
+                }),
+              }
+            );
+            return;
+          }
+
+          if (failure?.reason === "file-not-found") {
+            showErrorToast(
+              t("extraction_file_not_found_title", { ns: "downloads" }),
+              {
+                message: t("extraction_file_not_found_description", {
+                  ns: "downloads",
+                }),
+              }
+            );
+            return;
+          }
+
+          showErrorToast(t("extraction_failed_title", { ns: "downloads" }), {
+            message: t("extraction_failed_description", { ns: "downloads" }),
+          });
+        }
+      );
+
+    const unsubscribeExecutableNotFound =
+      globalThis.window.electron.onGameExecutableNotFound(() => {
+        showErrorToast(
+          t("executable_not_found_title", { ns: "game_details" }),
+          {
+            message: t("executable_not_found_big_picture_description", {
+              ns: "game_details",
+            }),
+          }
+        );
+      });
+
+    return () => {
+      unsubscribeExtractionFailed();
+      unsubscribeExecutableNotFound();
+    };
+  }, [showErrorToast, t]);
+
+  useEffect(() => {
     setPendingRouteFocusPathname(pathname);
   }, [pathname]);
 
@@ -156,11 +212,12 @@ export default function App() {
     <Fragment>
       <ConfirmationModal
         visible={installerFoundInfo !== null}
-        title={t("installer_found_title")}
+        title={t("installer_found_title", { ns: "downloads" })}
         description={t("installer_found_description", {
+          ns: "downloads",
           fileName: installerFileName,
         })}
-        confirmLabel={t("installer_found_launch")}
+        confirmLabel={t("installer_found_launch", { ns: "downloads" })}
         onConfirm={() => {
           if (!installerFoundInfo) return;
           void window.electron.launchInstallerAndWatch(

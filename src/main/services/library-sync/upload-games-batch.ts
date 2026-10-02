@@ -5,8 +5,9 @@ import { WindowManager } from "../window-manager";
 import { AchievementWatcherManager } from "../achievements/achievement-watcher-manager";
 import { gamesSublevel } from "@main/level";
 import { logger } from "@main/services/logger";
+import { trackRemoteLibrarySync } from "./remote-library-sync-state";
 
-export const uploadGamesBatch = async () => {
+const uploadLocalGamesAndMerge = async () => {
   const games = await gamesSublevel
     .values()
     .all()
@@ -47,3 +48,6 @@ export const uploadGamesBatch = async () => {
   if (WindowManager.mainWindow)
     WindowManager.sendToAppWindows("on-library-batch-complete");
 };
+
+export const uploadGamesBatch = () =>
+  trackRemoteLibrarySync(uploadLocalGamesAndMerge);

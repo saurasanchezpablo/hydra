@@ -5,15 +5,20 @@ import type { GameShop, LibraryGame } from "@types";
 import { registerEvent } from "../register-event";
 import {
   downloadsSublevel,
-  gameAchievementsSublevel,
   gamesArtworkSelectionSublevel,
   gamesShopAssetsSublevel,
   gamesShopCacheSublevel,
   gamesSublevel,
 } from "@main/level";
 import { composeAssetsWithArtwork } from "@shared";
-import { getGameAssets } from "../catalogue/get-game-assets";
+import { HydraApi } from "@main/services/hydra-api";
 import { WindowManager } from "@main/services";
+import { belongsToLibraryCollection } from "@main/services/library-sync/game-visibility";
+import {
+  resolveAchievementCount,
+  resolveUnlockedAchievementCount,
+} from "@main/services/achievements/achievement-memory-store";
+import { getGameAssets } from "../catalogue/get-game-assets";
 
 const PREFETCH_CONCURRENCY = 5;
 const LOCAL_CACHE_EXPIRATION = 1000 * 60 * 60 * 8;
@@ -40,6 +45,11 @@ export const lookupCachedPlatform = async (
   return null;
 };
 
+/**
+ * Fork: warm the local shop-asset cache for games whose artwork is missing or
+ * stale, then tell the renderer to refresh. Keeps library covers/icons present
+ * on a self-hosted backend, which does not pre-populate them.
+ */
 const batchPrefetchAssets = async (
   entries: { key: string; shop: GameShop; objectId: string }[]
 ) => {
@@ -71,13 +81,15 @@ const batchPrefetchAssets = async (
   WindowManager.sendToAppWindows("on-library-batch-complete");
 };
 
-const getLibrary = async (): Promise<LibraryGame[]> => {
+const getLibrary = async (
+  collection: "visible" | "hidden" | "all" = "visible"
+): Promise<LibraryGame[]> => {
   const results = await gamesSublevel.iterator().all();
   const pendingFetch: { key: string; shop: GameShop; objectId: string }[] = [];
 
   const library = await Promise.all(
     results
-      .filter(([_key, game]) => game.isDeleted === false)
+      .filter(([_key, game]) => belongsToLibraryCollection(game, collection))
       .map(async ([key, game]) => {
         const download = await downloadsSublevel.get(key);
         const gameAssets = await gamesShopAssetsSublevel.get(key);
@@ -86,24 +98,11 @@ const getLibrary = async (): Promise<LibraryGame[]> => {
           gameAssets ?? null,
           artworkSelection
         );
-        const achievements = await gameAchievementsSublevel
-          .get(key)
-          .catch(() => null);
-
-        const validAchievementNames = new Set(
-          achievements?.achievements?.map((a) =>
-            (a.name ?? "").toUpperCase()
-          ) || []
+        const unlockedAchievementCount = resolveUnlockedAchievementCount(
+          game.shop,
+          game.objectId,
+          game.unlockedAchievementCount
         );
-
-        const unlockedAchievementCount =
-          achievements?.unlockedAchievements?.filter(
-            (unlocked) =>
-              validAchievementNames.has((unlocked.name ?? "").toUpperCase()) &&
-              unlocked.unlockTime > 0
-          ).length ??
-          game.unlockedAchievementCount ??
-          0;
 
         // Verify installer still exists, clear if deleted externally
         let installerSizeInBytes = game.installerSizeInBytes;
@@ -166,7 +165,11 @@ const getLibrary = async (): Promise<LibraryGame[]> => {
           installedSizeInBytes,
           download: download ?? null,
           unlockedAchievementCount,
-          achievementCount: game.achievementCount ?? 0,
+          achievementCount: resolveAchievementCount(
+            game.shop,
+            game.objectId,
+            game.achievementCount
+          ),
           // Spread composed assets last to ensure all image URLs are properly set
           ...composedAssets,
           title: composedAssets?.title || game.title,
@@ -180,9 +183,14 @@ const getLibrary = async (): Promise<LibraryGame[]> => {
       })
   );
 
-  batchPrefetchAssets(pendingFetch);
+  void batchPrefetchAssets(pendingFetch);
 
   return library;
 };
 
-registerEvent("getLibrary", getLibrary);
+registerEvent("getLibrary", (_event, includeConcealed = false) =>
+  getLibrary(includeConcealed ? "all" : "visible")
+);
+registerEvent("getHiddenLibrary", () =>
+  HydraApi.isLoggedIn() ? getLibrary("hidden") : Promise.resolve([])
+);
