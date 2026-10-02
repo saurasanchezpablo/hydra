@@ -13,12 +13,17 @@ export const fetchRemoteProfileGames = async <T>(
     params: Record<string, unknown> = {},
     path = "/profile/games"
   ): Promise<T[]> => {
-    const fetchPage = (pageIndex: number) =>
-      fetchGames(path, {
+    // A backend that does not implement a route may resolve with its error
+    // body instead of rejecting, so never assume the page is an array.
+    const fetchPage = async (pageIndex: number) => {
+      const page = await fetchGames(path, {
         ...params,
         take: PAGE_SIZE,
         skip: pageIndex * PAGE_SIZE,
       });
+
+      return Array.isArray(page) ? page : [];
+    };
 
     const firstPage = await fetchPage(0);
     if (firstPage.length < PAGE_SIZE) return firstPage;

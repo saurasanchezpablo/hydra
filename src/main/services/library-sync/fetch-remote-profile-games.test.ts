@@ -83,6 +83,26 @@ describe("remote profile library fetching", () => {
     assert.deepEqual(games, ["visible-pc"]);
   });
 
+  it("ignores non-array pages from a backend that does not implement a route", async () => {
+    // A self-hosted backend answers unimplemented routes with a JSON error
+    // body; HydraApi resolves with that body rather than rejecting, so the
+    // pagination must not treat it as a page of games.
+    const notFound = {
+      message: "Route GET:/profile/games/hidden not found",
+      error: "Not Found",
+      statusCode: 404,
+    };
+
+    const games = await fetchRemoteProfileGames(async (path, params) => {
+      if (path === "/profile/games/hidden") {
+        return notFound as unknown as string[];
+      }
+      return [`visible-${params.shop ?? "pc"}`];
+    });
+
+    assert.deepEqual(games, ["visible-pc", "visible-launchbox"]);
+  });
+
   it("rejects failed hidden reads instead of treating hidden imports as removed", async () => {
     for (const status of [401, 500]) {
       const failure = Object.assign(new Error("Hidden library unavailable"), {
