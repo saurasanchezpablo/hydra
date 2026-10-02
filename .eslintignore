@@ -5,3 +5,6 @@ out
 migration.stub
 hydra-python-rpc/
 hydra-native/
+# CMake writes compiler_depend.ts timestamp files here; they are not TypeScript.
+native/torrent-bridge/build/
+native/torrent-bridge/vcpkg_installed/
